@@ -59,11 +59,11 @@ SELECT
         WHEN ct.alias = 'Image' AND mp.textValue IS NOT NULL THEN
             REPLACE(
                 JSON_VALUE(CAST(mp.textValue AS NVARCHAR(MAX)), '$.src'),
-                'https://cdn.advent.com/',
+                'https://cdn.example.com/',
                 ''
             )
         WHEN ct.alias = 'File' AND mp.varcharValue IS NOT NULL THEN
-            REPLACE(mp.varcharValue, 'https://cdn.advent.com/', '')
+            REPLACE(mp.varcharValue, 'https://cdn.example.com/', '')
         ELSE NULL
     END AS s3RelativePath
 FROM MediaHierarchy mh

@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Text.Json;
 using Umbraco.Cms.Core.Services;
 
-namespace SSCAdvent.Controllers;
+namespace MyClient.Controllers;
 
 /// <summary>
 /// One-time media import controller that creates Umbraco media nodes from a CSV export
@@ -30,7 +30,7 @@ public class MediaImportController : ControllerBase
     private const string AliasImage = "Image";
     private const string AliasFile = "File";
     private const string AliasSvg = "VectorGraphics";
-    private const string CdnBase = "https://cdn.advent.com";
+    private const string CdnBase = "https://cdn.example.com";
 
     public MediaImportController(IMediaService mediaService)
     {
