@@ -1,0 +1,76 @@
+// Running this query against an Umbraco v8 database will produce results that can be exported to match the expected csv format
+
+WITH MediaHierarchy AS (
+    SELECT 
+        n.id,
+        n.parentId,
+        n.sortOrder,
+        n.text AS nodeName,
+        n.path AS nodePath,
+        n.createDate,
+        CAST(n.text AS NVARCHAR(MAX)) AS fullFolderPath
+    FROM umbracoNode n
+    WHERE n.nodeObjectType = 'B796F64C-1F99-4FFB-B886-4BF4BC011A9C'
+        AND n.trashed = 0
+        AND n.parentId = -1
+
+    UNION ALL
+
+    SELECT
+        child.id,
+        child.parentId,
+        child.sortOrder,
+        child.text AS nodeName,
+        child.path AS nodePath,
+        child.createDate,
+        CAST(parent.fullFolderPath + '/' + child.text AS NVARCHAR(MAX))
+    FROM umbracoNode child
+    INNER JOIN MediaHierarchy parent ON parent.id = child.parentId
+    WHERE child.nodeObjectType = 'B796F64C-1F99-4FFB-B886-4BF4BC011A9C'
+        AND child.trashed = 0
+),
+-- De-duplicate property data, taking only the latest row per node
+MediaProperties AS (
+    SELECT
+        cv.nodeId,
+        pd.varcharValue,
+        pd.textValue,
+        ROW_NUMBER() OVER (
+            PARTITION BY cv.nodeId 
+            ORDER BY pd.id DESC
+        ) AS rn
+    FROM umbracoContentVersion cv
+    INNER JOIN umbracoPropertyData pd ON pd.versionId = cv.id
+    INNER JOIN cmsPropertyType pt ON pt.id = pd.propertytypeId
+        AND pt.Alias = 'umbracoFile'
+    WHERE cv.[current] = 1
+)
+SELECT
+    mh.id,
+    mh.parentId,
+    mh.sortOrder,
+    mh.nodeName,
+    mh.nodePath,
+    mh.fullFolderPath,
+    mh.createDate,
+    ct.alias AS mediaType,
+    CAST(mp.textValue AS NVARCHAR(MAX)) AS filePathJson,
+    CASE
+        WHEN ct.alias = 'Image' AND mp.textValue IS NOT NULL THEN
+            REPLACE(
+                JSON_VALUE(CAST(mp.textValue AS NVARCHAR(MAX)), '$.src'),
+                'https://cdn.advent.com/',
+                ''
+            )
+        WHEN ct.alias = 'File' AND mp.varcharValue IS NOT NULL THEN
+            REPLACE(mp.varcharValue, 'https://cdn.advent.com/', '')
+        ELSE NULL
+    END AS s3RelativePath
+FROM MediaHierarchy mh
+INNER JOIN umbracoContent c ON c.nodeId = mh.id
+INNER JOIN cmsContentType ct ON ct.nodeId = c.contentTypeId
+LEFT JOIN MediaProperties mp ON mp.nodeId = mh.id AND mp.rn = 1
+ORDER BY 
+    mh.nodePath,
+    CASE WHEN ct.alias = 'Folder' THEN 0 ELSE 1 END,
+    mh.sortOrder
