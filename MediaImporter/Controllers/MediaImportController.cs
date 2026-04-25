@@ -21,7 +21,9 @@ public class MediaImportController : ControllerBase
 {
     private readonly IMediaService _mediaService;
 
-    private static readonly string CsvPath = Path.Combine(Directory.GetCurrentDirectory(), "media-export-test.csv");
+    // use a test file for a safe/small run
+    //private static readonly string CsvPath = Path.Combine(Directory.GetCurrentDirectory(), "media-export-test.csv");
+    private static readonly string CsvPath = Path.Combine(Directory.GetCurrentDirectory(), "media-export.csv");
     private static readonly string ProgressPath = Path.Combine(Directory.GetCurrentDirectory(), "media-import-progress.json");
     private static readonly string LogPath = Path.Combine(Directory.GetCurrentDirectory(), "media-import-log.txt");
 
